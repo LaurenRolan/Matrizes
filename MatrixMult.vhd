@@ -79,7 +79,7 @@ begin
 							proxEstado <= s0a;
 						end if;
 						
-		when s2 => zeraY <= '1'; zeraJ <='1'; incI<='1'; incX <='1';
+		when s2 => zeraY <= '1'; zeraJ <='1'; incI<='1'; incX <='1'; incEndA <= '0'; incEndB <='0';
 						if (compEndA = '1') then
 							proxEstado <= s2;
 						else
@@ -192,8 +192,6 @@ begin
 		elsif(rising_edge(clk)) then
 			if incEndA = '1' then
 				addrA<= addrA + '1';
-				--if addrA = "10000" then compEndA <= '1';
-				--else compEndA <= '0'; end if;
 			end if;
 		end if;
 	end process;
