@@ -90,7 +90,8 @@ begin
 		when s3 => zeraAcc <= '1'; zeraX <= '1'; zeraI <= '1'; zeraEnd <= '1'; incX <= '0'; incI <= '0';
 						proxEstado <= s4;
 		
-		when s4 => somaAcc <= '1'; proxEstado <= s5;
+		when s4 => somaAcc <= '1'; proxEstado <= s5; zeraX <= '0'; zeraAcc <= '0'; zeraI <='0';
+						zeraEnd <= '0';
 		
 		when s5 => somaAcc <= '0'; incJ <= '1';
 						if compJ = '1' then
