@@ -31,26 +31,28 @@ use ieee.std_logic_unsigned.all;
 --library UNISIM;
 --use UNISIM.VComponents.all;
 
-entity MatrixMult is
+entity MatrixMult2 is
     Port ( clk : in  STD_LOGIC;
-           rst : in  STD_LOGIC
+           rst : in  STD_LOGIC;
+			  pronto : out  STD_LOGIC
 			  );
-end MatrixMult;
+end MatrixMult2;
 
-architecture Behavioral of MatrixMult is
+architecture Behavioral of MatrixMult2 is
 
-type STATE is (s0a, s0, s1, s2);
+type STATE is (s0a, s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10);
 signal estado, proxEstado: STATE;
 type matriz is array(0 TO 3, 0 TO 3) OF STD_LOGIC_VECTOR(3 DOWNTO 0);
 signal a, b : matriz;
 signal x,y,i,j: integer :=0; 
 signal rowB,colB: integer :=0; 
-signal wea, web :STD_LOGIC_VECTOR(0 DOWNTO 0) := "0";
-signal addra, addrb: STD_LOGIC_VECTOR(4 DOWNTO 0); -- era 4 downto 0
+signal wea, web, wer :STD_LOGIC_VECTOR(0 DOWNTO 0) := "0";
+signal addra, addrb, addrr: STD_LOGIC_VECTOR(4 DOWNTO 0); -- era 4 downto 0
 signal dina, douta, dinb, doutb : STD_LOGIC_VECTOR(3 DOWNTO 0) := "0000"; -- era 4
-signal ldaA, ldaB, sel, incI, incJ, incX, incY: STD_LOGIC;
-signal incEndA, incEndB, zeraI, zeraJ, zeraX, zeraY, compEndA, compJ: STD_LOGIC := '0';
-signal c,d,e,f: integer :=0;
+signal ldaA, ldaB, sel, incI, incJ, incX, incY, somaAcc: STD_LOGIC;
+signal incEndA, incEndB, incEndR, zeraI, zeraJ, zeraX, zeraY, zeraAcc, zeraEnd, compEndA, compJ, compX, compI: STD_LOGIC := '0';
+signal aa, bb: STD_LOGIC_VECTOR(3 DOWNTO 0);
+signal acc, doutr : STD_LOGIC_VECTOR (7 downto 0);
 
 begin
  -- FSM 
@@ -61,7 +63,9 @@ begin
 	elsif(rising_edge(clk)) then
 		estado <= proxEstado;
 	end if;
-  end process;
+	end process;
+
+
   
   process(clk, estado, proxEstado, compJ, compEndA)
   begin
@@ -81,16 +85,59 @@ begin
 						
 		when s2 => zeraY <= '1'; zeraJ <='1'; incI<='1'; incX <='1'; incEndA <= '0'; incEndB <='0';
 						if (compEndA = '1') then
-							proxEstado <= s2;
+							proxEstado <= s3;
 						else
 							proxEstado <= s0a;
 						end if;
+		when s3 => zeraAcc <= '1'; zeraX <= '1'; zeraI <= '1'; zeraEnd <= '1'; incX <= '0'; incI <= '0';  
+						proxEstado <= s4;
+		
+		when s4 => somaAcc <= '1'; proxEstado <= s5; zeraX <= '0'; zeraAcc <= '0'; zeraI <='0'; incJ <= '0';zeraJ <='0'; 
+						zeraEnd <= '0';
+		
+		when s5 => somaAcc <= '0'; incJ <= '1'; incY <= '1';
+						if compJ = '1' then
+							proxEstado <= s6;
+						else proxEstado <= s4;						
+						end if;
+		
+		when s6 => incJ <= '0'; incY <= '0'; wer <= "1"; incX <= '1'; proxEstado <= s7;
+		
+		when s7 => wer <= "0"; incX <= '0'; incEndR <= '1'; zeraAcc <= '1';
+						if compX = '1' then
+							proxEstado <= s8;
+						else proxEstado <= s9;
+						end if;
+		when s8 => incEndR <= '0'; zeraAcc <= '0'; zeraX <= '1'; incI <= '1';
+						if compI = '1' then
+							proxEstado <= s10;
+						else proxEstado <= s9;
+						end if;
+		when s9 => zeraJ <= '1'; zeraY <= '1'; incEndR <= '0'; zeraAcc <= '0'; incI <= '0'; zeraX <= '0';
+						proxEstado <= s4;
+		when s10 => pronto <= '1';
 		
 	end case;
   end process;
 -- Comparadores
 	compJ <= '1' when (j = 3) else '0'; --?????????
 	compEndA <= '1' when (addrA = "10000") else '0'; -- era > "10000" same shit
+	compX <= '1' when (x = 4) else '0';
+	compi <= '1' when (i = 4) else '0';
+	
+-- Acc
+process (clk, zeraAcc)
+begin
+	if zeraAcc = '1' then
+		acc <= (others => '0');
+	elsif rising_edge(clk) then
+		if somaAcc = '1' then
+			acc <= acc + a(i, j)*b(x, j);
+			aa<= a(i, j);
+			bb<= b(x, j);
+		end if;
+	end if;
+end process;
 	
 --regA	
 		process(clk, rst)
@@ -190,7 +237,7 @@ begin
 		if(rst = '1') then
 			addrA <= "00001";
 		elsif(rising_edge(clk)) then
-			if incEndA = '1' then
+			if incEndA = '1' and addrA <= "01111" then
 				addrA<= addrA + '1';
 			end if;
 		end if;
@@ -201,14 +248,28 @@ begin
 		if(rst = '1') then
 			addrB <= "00001";
 		elsif(rising_edge(clk)) then
-			if incEndB = '1' then
+			if incEndB = '1' and addrB <= "01111" then
 				addrB<= addrB + '1';
 			end if;
 		end if;
 	end process;
 	
+--addrR
+	process(clk, zeraEnd)
+	begin
+		if zeraEnd = '1' then
+			addrR <= "00001";
+		elsif rising_edge(clk) then
+			if incEndR = '1' then
+				addrR <= addrR + 1;
+			end if;
+		end if;
+	end process;
+
+	
 -- Memórias
 MEMA: entity work.memoA port map (clk, wea, addrA, dina, douta);
 MEMB: entity work.memoA port map (clk, web, addrB, dinb, doutb);
+MEMR: entity work.memoR port map (clk, wer, addrR, acc, doutr);
 		
 end Behavioral;
