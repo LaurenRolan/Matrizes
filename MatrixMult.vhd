@@ -31,16 +31,18 @@ use ieee.std_logic_unsigned.all;
 --library UNISIM;
 --use UNISIM.VComponents.all;
 
-entity MatrixMult2 is
+entity MatrixMult is
     Port ( clk : in  STD_LOGIC;
            rst : in  STD_LOGIC;
-			  pronto : out  STD_LOGIC
+			  muda: in  STD_LOGIC;
+			  pronto : out  STD_LOGIC;
+			  acumulador : out STD_LOGIC_VECTOR(7 DOWNTO 0)
 			  );
-end MatrixMult2;
+end MatrixMult;
 
-architecture Behavioral of MatrixMult2 is
+architecture Behavioral of MatrixMult is
 
-type STATE is (s0a, s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10);
+type STATE is (s0a, s0, s1, s2, s3, s4, s5, s5a, s6, s7, s8, s9, s10);
 signal estado, proxEstado: STATE;
 type matriz is array(0 TO 3, 0 TO 3) OF STD_LOGIC_VECTOR(3 DOWNTO 0);
 signal a, b : matriz;
@@ -67,7 +69,7 @@ begin
 
 
   
-  process(clk, estado, proxEstado, compJ, compEndA)
+  process(clk, estado, proxEstado, compJ, compEndA, muda, compX, compI)
   begin
 	case estado is
 		when s0a=> incY <='0'; incJ <='0'; incEndA<= '0'; incEndB <= '0'; 
@@ -92,10 +94,15 @@ begin
 		when s3 => zeraAcc <= '1'; zeraX <= '1'; zeraI <= '1'; zeraEnd <= '1'; incX <= '0'; incI <= '0';  
 						proxEstado <= s4;
 		
-		when s4 => somaAcc <= '1'; proxEstado <= s5; zeraX <= '0'; zeraAcc <= '0'; zeraI <='0'; incJ <= '0';zeraJ <='0'; 
+		when s4 => somaAcc <= '1'; proxEstado <= s5a; zeraX <= '0'; zeraAcc <= '0'; zeraI <='0'; incJ <= '0';zeraJ <='0'; 
 						zeraEnd <= '0';
+		when s5a=> somaAcc <= '0'; 
+						if muda = '1' then
+							proxEstado <= s5;
+						else proxEstado <= s5a;
+						end if;
 		
-		when s5 => somaAcc <= '0'; incJ <= '1'; incY <= '1';
+		when s5 => incJ <= '1'; incY <= '1';
 						if compJ = '1' then
 							proxEstado <= s6;
 						else proxEstado <= s4;						
@@ -266,7 +273,8 @@ end process;
 		end if;
 	end process;
 
-	
+acumulador <= acc;
+
 -- Memórias
 MEMA: entity work.memoA port map (clk, wea, addrA, dina, douta);
 MEMB: entity work.memoA port map (clk, web, addrB, dinb, doutb);
